@@ -29,21 +29,31 @@ jobs:
         run: docker-compose up -d --build
 
       - name: Wait for services to be ready
-        run: sleep 15
+        run: sleep 10
 
       - name: Test Case 1 - Full system running
         run: |
           echo "Running health check with all services up..."
           response=$(curl -s http://localhost:80/health)
           echo "Response: $response"
-          [[ "$response" == *'"status":"ok"'* && "$response" == *'"database":"connected"'* ]] || exit 1
+          if [[ "$response" == *'"status":"ok"'* && "$response" == *'"database":"connected"'* ]]; then
+           echo "Test Case 1 passed"
+          else
+            echo "Test Case 1 failed"
+            exit 1
+          fi
 
       - name: Test Case 2 - Stop web service, expect 502
         run: |
           docker-compose stop web
           sleep 5
-          echo "Running health check with web down (expecting 502)..."
-          ! curl -f http://localhost:80/health
+          echo "Running health check with web down (expecting 502 )..."
+          if ! curl -f http://localhost:80/health; then
+            echo "Test Case 2 passed"
+          else
+            echo "Test Case 2 failed"
+            exit 1
+          fi
 
       - name: Test Case 3 - Start web, stop db, expect 'disconnected'
         run: |
@@ -53,4 +63,33 @@ jobs:
           echo "Running health check with DB down..."
           response=$(curl -s http://localhost:80/health)
           echo "Response: $response"
-          [[ "$response" == *'"status":"ok"'* && "$response" == *'"database":"disconnected"'* ]] || exit 1
+          if [[ "$response" == *'"status":"ok"'* && "$response" == *'"database":"disconnected"'* ]]; then
+            echo "Test Case 3 passed"
+          else
+            echo "Test Case 3 failed"
+            exit 1
+          fi
+      - name: Test Case 4 - start  and test again to make sure stopped services are up
+        run: |
+          docker-compose start db
+          sleep 10
+          echo "Running health check with all services up..."
+          response=$(curl -s http://localhost:80/health)
+          echo "Response: $response"
+          if [[ "$response" == *'"status":"ok"'* && "$response" == *'"database":"connected"'* ]]; then
+            echo "Test Case 4 passed"
+          else
+            echo "Test Case 4 failed"
+            exit 1
+          fi
+      - name: Test Case 5 - Stop all services, expect 503
+        run: |
+          docker-compose stop
+          sleep 5
+          echo "Running health check with all services down..."
+          if ! curl -f http://localhost:80/health; then
+            echo "Test Case 5 passed"
+          else
+            echo "Test Case 5 failed"
+            exit 1
+          fi
