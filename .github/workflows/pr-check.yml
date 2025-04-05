@@ -1,0 +1,44 @@
+name: Pull Request Health Check Tests
+
+on:
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  health-check-tests:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Start all services with Docker Compose
+        run: docker-compose up -d --build
+
+      - name: Wait for services to be ready
+        run: sleep 15
+
+      - name: Test Case 1 - Full system running
+        run: |
+          echo "Running health check with all services up..."
+          response=$(curl -s http://localhost:80/health)
+          echo "Response: $response"
+          [[ "$response" == *'"status":"ok"'* && "$response" == *'"database":"connected"'* ]] || exit 1
+
+      - name: Test Case 2 - Stop web service, expect 502
+        run: |
+          docker-compose stop web
+          sleep 5
+          echo "Running health check with web down (expecting 502)..."
+          ! curl -f http://localhost:80/health
+
+      - name: Test Case 3 - Start web, stop db, expect 'disconnected'
+        run: |
+          docker-compose start web
+          docker-compose stop db
+          sleep 10
+          echo "Running health check with DB down..."
+          response=$(curl -s http://localhost:80/health)
+          echo "Response: $response"
+          [[ "$response" == *'"status":"ok"'* && "$response" == *'"database":"disconnected"'* ]] || exit 1
