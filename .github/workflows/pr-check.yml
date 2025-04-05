@@ -12,6 +12,18 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
+        
+      - name: Set up Docker Compose
+        run: |
+          # Install Docker Compose v2 if not already present
+          if ! command -v docker-compose &> /dev/null; then
+            sudo curl -L "https://github.com/docker/compose/releases/latest/download/docker-compose-$(uname -s)-$(uname -m)" -o /usr/local/bin/docker-compose
+            sudo chmod +x /usr/local/bin/docker-compose
+            docker-compose --version
+          else
+            echo "Docker Compose already installed"
+            docker-compose --version
+          fi
 
       - name: Start all services with Docker Compose
         run: docker-compose up -d --build
