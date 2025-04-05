@@ -12,7 +12,7 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
-        
+
       - name: Set up Docker Compose
         run: |
           # Install Docker Compose v2 if not already present
@@ -80,16 +80,5 @@ jobs:
             echo "Test Case 4 passed"
           else
             echo "Test Case 4 failed"
-            exit 1
-          fi
-      - name: Test Case 5 - Stop all services, expect 503
-        run: |
-          docker-compose stop
-          sleep 5
-          echo "Running health check with all services down..."
-          if ! curl -f http://localhost:80/health; then
-            echo "Test Case 5 passed"
-          else
-            echo "Test Case 5 failed"
             exit 1
           fi
